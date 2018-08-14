@@ -31,7 +31,7 @@ public:
 protected:
     void showEvent(QShowEvent* event) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
+    //    void resizeEvent(QResizeEvent* event) override;
 
     // QAbstractItemView interface
 protected slots:

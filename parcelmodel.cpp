@@ -45,50 +45,19 @@ void ParcelModel::setParcel(const QByteArray& data)
 {
     if (m_parcel.size() != data.size())
         error(QString("Не соответствие размеров посылок:\n"
-                      "в табличце %1 байт\n"
-                      "пришло %2")
+                      "в табличце %1 байт пришло %2!")
                   .arg(m_parcel.size())
                   .arg(data.size()));
 
-    QList<Field>& fl = (*m_data);
-    const char* p = data.constData();
-    for (int i = 0; i < fl.size(); ++i) {
-        switch (fl[i].type()) {
-        case 0:
-            fl[i].setValue(*reinterpret_cast<const int8_t*>(p));
-            p += sizeof(int8_t);
-            break;
-        case 1:
-            fl[i].setValue(*reinterpret_cast<const int16_t*>(p));
-            p += sizeof(int16_t);
-            break;
-        case 2:
-            fl[i].setValue(*reinterpret_cast<const int32_t*>(p));
-            p += sizeof(int32_t);
-            break;
-        case 3:
-            fl[i].setValue(*reinterpret_cast<const uint8_t*>(p));
-            p += sizeof(uint8_t);
-            break;
-        case 4:
-            fl[i].setValue(*reinterpret_cast<const uint16_t*>(p));
-            p += sizeof(uint16_t);
-            break;
-        case 5:
-            fl[i].setValue(*reinterpret_cast<const uint32_t*>(p));
-            p += sizeof(uint32_t);
-            break;
-        case 6:
-            fl[i].setValue(*reinterpret_cast<const float*>(p));
-            p += sizeof(float);
-            break;
-        case 7:
-            fl[i].setValue(*reinterpret_cast<const double*>(p));
-            p += sizeof(double);
-            break;
-        }
+    const char* ptr = data.constData();
+
+    QList<Field>& fields = (*m_data);
+
+    for (int i = 0; i < fields.size(); ++i) {
+        fields[i].setValue2(ptr);
+        ptr += fields[i].size();
     }
-    dataChanged(createIndex(0, 3), createIndex(fl.size(), 3));
+    dataChanged(createIndex(0, 3), createIndex(fields.size(), 3));
 }
 
 int ParcelModel::rowCount(const QModelIndex& /*parent*/) const
@@ -121,24 +90,7 @@ QVariant ParcelModel::data(const QModelIndex& index, int role) const
             case 2:
                 return var.size();
             case 3:
-                switch (var.type()) {
-                case 0:
-                    return var.value<int8_t>();
-                case 1:
-                    return var.value<int16_t>();
-                case 2:
-                    return var.value<int32_t>();
-                case 3:
-                    return var.value<uint8_t>();
-                case 4:
-                    return var.value<uint16_t>();
-                case 5:
-                    return var.value<uint32_t>();
-                case 6:
-                    return var.value<float>();
-                case 7:
-                    return var.value<double>();
-                }
+                return var.value2();
             }
         }
         return QVariant();
@@ -173,34 +125,7 @@ bool ParcelModel::setData(const QModelIndex& index, const QVariant& value, int r
             var.setType(value.toInt());
             break;
         case 3:
-            switch (var.type()) {
-            case 0:
-                var.setValue(int8_t(value.toInt()));
-                break;
-            case 1:
-                var.setValue(int16_t(value.toInt()));
-                break;
-            case 2:
-                var.setValue(int32_t(value.toInt()));
-                break;
-            case 3:
-                var.setValue(uint8_t(value.toUInt()));
-                break;
-            case 4:
-                var.setValue(uint16_t(value.toUInt()));
-                break;
-            case 5:
-                var.setValue(uint32_t(value.toUInt()));
-                break;
-            case 6:
-                var.setValue(float(value.toFloat()));
-                break;
-            case 7:
-                var.setValue(double(value.toDouble()));
-                break;
-            default:
-                return false;
-            }
+            var.setValue3(value);
             break;
         default:
             return false;

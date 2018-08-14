@@ -130,27 +130,6 @@ void MyItemDelegate::drawFocus(QPainter* painter, const QStyleOptionViewItem& op
 DataView::DataView(QWidget* parent)
     : QTableView(parent)
 {
-    connect(&resizeTtimer, &QTimer::timeout, [&]() {
-        resizeTtimer.stop();
-        int columnCount = model()->columnCount();
-        if (!columnCount)
-            return;
-
-        int width = size().width() - verticalHeader()->width() - 2;
-        if (verticalScrollBar()->isVisible())
-            width -= verticalScrollBar()->width();
-
-        if (objectName() == "tvCommand") {
-            resizeColumnToContents(1);
-            setColumnWidth(0, width - columnWidth(1));
-        } else {
-            resizeColumnToContents(0);
-            setColumnWidth(1, 60);
-            resizeColumnToContents(2);
-            setColumnWidth(3, width - columnWidth(0) - columnWidth(1) - columnWidth(2));
-        }
-        resizeRowsToContents();
-    });
 }
 
 void DataView::showEvent(QShowEvent* /*event*/)
@@ -182,12 +161,6 @@ void DataView::contextMenuEvent(QContextMenuEvent* event)
         menu.actions()[1]->setEnabled(row > 3 && row < model()->rowCount() - 1);
     }
     menu.exec(event->globalPos());
-}
-
-void DataView::resizeEvent(QResizeEvent* event)
-{
-    resizeTtimer.start(50);
-    QWidget::resizeEvent(event);
 }
 
 void DataView::rowsInserted(const QModelIndex& /*parent*/, int /*start*/, int /*end*/)

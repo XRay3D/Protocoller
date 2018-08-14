@@ -28,17 +28,26 @@ MainWindow::MainWindow(QWidget* parent)
         ui->cbxBaud->addItem(QString::number(BaudRate));
 
     ui->tvCommand->setModel(command);
-    ui->tvTx->setModel(tx);
-    ui->tvRx->setModel(rx);
+    ui->tvCommand->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    ui->tvCommand->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    ui->tvCommand->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-    for (int i = 0; i < 4; ++i) {
-        ui->tvRx->setItemDelegateForColumn(i, new MyItemDelegate());
-        ui->tvTx->setItemDelegateForColumn(i, new MyItemDelegate());
-    }
-    //    ui->tvRx->setItemDelegateForColumn(3, new MyItemDelegate());
-    //    ui->tvTx->setItemDelegateForColumn(3, new MyItemDelegate());
-    //    ui->tvRx->setItemDelegateForColumn(1, new MyItemDelegate());
-    //    ui->tvTx->setItemDelegateForColumn(1, new MyItemDelegate());
+    ui->tvTx->setModel(tx);
+    ui->tvTx->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tvTx->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+    ui->tvTx->setColumnWidth(1, 60);
+    ui->tvTx->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+    ui->tvTx->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+    ui->tvRx->setModel(rx);
+    ui->tvRx->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    ui->tvRx->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
+    ui->tvRx->setColumnWidth(1, 60);
+    ui->tvRx->horizontalHeader()->setSectionResizeMode(3, QHeaderView::Stretch);
+    ui->tvRx->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+    ui->tvRx->setItemDelegate(new MyItemDelegate());
+    ui->tvTx->setItemDelegate(new MyItemDelegate());
 
     connect(ui->tvCommand, &DataView::clicked, [&](const QModelIndex& index) {
         if (index.row() > -1) {
@@ -48,6 +57,7 @@ MainWindow::MainWindow(QWidget* parent)
             ui->tvTx->resizeRowsToContents();
         }
     });
+
     connect(command, &CommandModel::resetParcelModel, [&]() {
         rx->setData(nullptr);
         tx->setData(nullptr);
@@ -56,10 +66,12 @@ MainWindow::MainWindow(QWidget* parent)
     connect(hwi::tester, &Tester::Read, rx, &ParcelModel::setParcel);
     connect(hwi::tester, &Tester::Read, this, &MainWindow::setRx);
     connect(hwi::tester, &Tester::Error, this, &MainWindow::Error);
+
     connect(ui->action, &QAction::triggered, [&]() {
         setTx(tx->parcel());
         emit hwi::tester->Write(tx->parcel());
     });
+
     connect(rx, &ParcelModel::error, this, &MainWindow::setError);
 
     QMenu* fileMenu = menuBar()->addMenu(tr("Файл"));
@@ -84,7 +96,7 @@ void MainWindow::writeSettings()
     settings.beginGroup("MainWindow");
     settings.setValue("geometry", saveGeometry());
     settings.setValue("windowState", saveState());
-    //settings.setValue("widget/geometry", ui->widget->saveGeometry());
+    settings.setValue("widget/geometry", ui->widget->saveGeometry());
     settings.setValue("widget/windowState", ui->widget->saveState());
     settings.setValue("cbxPort", ui->cbxPort->currentIndex());
     settings.setValue("cbxBaud", ui->cbxBaud->currentIndex());
@@ -97,7 +109,7 @@ void MainWindow::readSettings()
     settings.beginGroup("MainWindow");
     restoreGeometry(settings.value("geometry").toByteArray());
     restoreState(settings.value("windowState").toByteArray());
-    //ui->widget->restoreGeometry(settings.value("widget/geometry").toByteArray());
+    ui->widget->restoreGeometry(settings.value("widget/geometry").toByteArray());
     ui->widget->restoreState(settings.value("widget/windowState").toByteArray());
     ui->cbxPort->setCurrentIndex(settings.value("cbxPort").toInt());
     ui->cbxBaud->setCurrentIndex(settings.value("cbxBaud").toInt());
