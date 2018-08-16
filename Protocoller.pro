@@ -32,8 +32,9 @@ SOURCES += \
     dataview.cpp \
     field.cpp \
     commandmodel.cpp \
-    parcelmodel.cpp \
+    parcelmodel.cpp
 #    myspinbox.cpp
+F
 
 HEADERS += \
     mainwindow.h \
@@ -43,8 +44,13 @@ HEADERS += \
     dataview.h \
     field.h \
     commandmodel.h \
-    parcelmodel.h \
+    parcelmodel.h
 #    myspinbox.h
+
 
 FORMS += \
     mainwindow.ui
+
+DISTFILES += \
+
+

@@ -19,7 +19,6 @@ MyItemDelegate::MyItemDelegate(QObject* parent)
 }
 
 //Необходимо замутить свой QSpinBox так как родной юинт не подерживает.
-
 QWidget* MyItemDelegate::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     if (index.column() == 1) {
@@ -27,59 +26,55 @@ QWidget* MyItemDelegate::createEditor(QWidget* parent, const QStyleOptionViewIte
         dlg->addItems(Field().typeNames());
         dlg->setCurrentIndex(index.data(Qt::UserRole).toInt());
         return dlg;
+    } else if (index.column() == 3) {
+        QDoubleSpinBox* dsbx;
+        int type = index.sibling(index.row(), 1).data(Qt::UserRole).toInt();
+        dsbx = new QDoubleSpinBox(parent);
+        dsbx->setDecimals(0);
+        switch (type) {
+        case 0:
+            dsbx->setRange(std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max());
+            dsbx->setValue(int8_t(index.data(Qt::UserRole).toInt()));
+
+            break;
+        case 1:
+            dsbx->setRange(std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max());
+            dsbx->setValue(int16_t(index.data(Qt::UserRole).toInt()));
+            break;
+        case 2:
+            dsbx->setRange(std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max());
+            dsbx->setValue(int32_t(index.data(Qt::UserRole).toInt()));
+            break;
+        case 3:
+            dsbx->setRange(std::numeric_limits<uint8_t>::min(), std::numeric_limits<uint8_t>::max());
+            dsbx->setValue(uint8_t(index.data(Qt::UserRole).toUInt()));
+            break;
+        case 4:
+            dsbx->setRange(std::numeric_limits<uint16_t>::min(), std::numeric_limits<uint16_t>::max());
+            dsbx->setValue(uint16_t(index.data(Qt::UserRole).toUInt()));
+            break;
+        case 5:
+            dsbx->setRange(std::numeric_limits<uint32_t>::min(), std::numeric_limits<uint32_t>::max());
+            dsbx->setValue(uint32_t(index.data(Qt::UserRole).toUInt()));
+            break;
+        case 6:
+            dsbx->setRange(-std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+            dsbx->setValue(uint32_t(index.data(Qt::UserRole).toFloat()));
+            break;
+        case 7:
+            dsbx->setRange(-std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
+            dsbx->setValue(uint32_t(index.data(Qt::UserRole).toDouble()));
+            break;
+        }
+        if (type < 6) {
+            dsbx->setToolTip(QString("Принимаемые значения от %1 до %2").arg(dsbx->minimum()).arg(dsbx->maximum()));
+            return dsbx;
+        } else {
+            dsbx->setToolTip(QString("Принимаемые значения от %1 до %2").arg(dsbx->minimum()).arg(dsbx->maximum()));
+            dsbx->setDecimals(16);
+            return dsbx;
+        }
     }
-    //    else if (index.column() == 3) {
-    //        QSpinBox* sbx;
-    //        QDoubleSpinBox* dsbx;
-    //        int type = index.sibling(index.row(), 1).data(Qt::UserRole).toInt();
-    //        if (type < 6)
-    //            sbx = new QSpinBox(parent); //создаем наше поле ввода с кнопкой
-    //        else
-    //            dsbx = new QDoubleSpinBox(parent);
-    //        switch (type) {
-    //        case 0:
-    //            sbx->setRange(std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max());
-    //            sbx->setValue(int8_t(index.data(Qt::UserRole).toInt()));
-    //            break;
-    //        case 1:
-    //            sbx->setRange(std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max());
-    //            sbx->setValue(int16_t(index.data(Qt::UserRole).toInt()));
-    //            break;
-    //        case 2:
-    //            sbx->setRange(std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max());
-    //            sbx->setValue(int32_t(index.data(Qt::UserRole).toInt()));
-    //            break;
-    //        case 3:
-    //            sbx->setRange(std::numeric_limits<uint8_t>::min(), std::numeric_limits<uint8_t>::max());
-    //            sbx->setValue(uint8_t(index.data(Qt::UserRole).toUInt()));
-    //            break;
-    //        case 4:
-    //            sbx->setRange(std::numeric_limits<uint16_t>::min(), std::numeric_limits<uint16_t>::max());
-    //            sbx->setValue(uint16_t(index.data(Qt::UserRole).toUInt()));
-    //            break;
-    //        case 5:
-    //            sbx->setRange(std::numeric_limits<uint32_t>::min(), std::numeric_limits<uint32_t>::max());
-    //            sbx->setValue(uint32_t(index.data(Qt::UserRole).toUInt()));
-    //            break;
-    //        case 6:
-    //            dsbx->setRange(-std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-    //            dsbx->setValue(uint32_t(index.data(Qt::UserRole).toFloat()));
-    //            break;
-    //        case 7:
-    //            dsbx->setRange(-std::numeric_limits<double>::max(), std::numeric_limits<double>::max());
-    //            dsbx->setValue(uint32_t(index.data(Qt::UserRole).toDouble()));
-    //            break;
-    //        }
-    //        if (type < 6) {
-    //            sbx->setToolTip(QString("Принимаемые значения от %1 до %2").arg(sbx->minimum()).arg(sbx->maximum()));
-    //            return sbx;
-    //        }
-    //        else {
-    //            dsbx->setToolTip(QString("Принимаемые значения от %1 до %2").arg(dsbx->minimum()).arg(dsbx->maximum()));
-    //            dsbx->setDecimals(12);
-    //            return dsbx;
-    //        }
-    //    }
 
     return QItemDelegate::createEditor(parent, option, index);
 }
@@ -130,6 +125,7 @@ void MyItemDelegate::drawFocus(QPainter* painter, const QStyleOptionViewItem& op
 DataView::DataView(QWidget* parent)
     : QTableView(parent)
 {
+    //setEditTriggers(SelectedClicked);
 }
 
 void DataView::showEvent(QShowEvent* /*event*/)
