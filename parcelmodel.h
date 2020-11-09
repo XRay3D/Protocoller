@@ -1,16 +1,13 @@
-#ifndef ParcelTable_H
-#define ParcelTable_H
+#pragma once
 
 #include "field.h"
-
+#include "hw/myprotokol.h"
 #include <QAbstractTableModel>
-
-#include <hw/myprotokol.h>
 
 class ParcelModel : public QAbstractTableModel, public MyProtokol {
     Q_OBJECT
 public:
-    explicit ParcelModel(QObject* parent = Q_NULLPTR);
+    explicit ParcelModel(QObject* parent = nullptr);
     ~ParcelModel() override;
     void setData(QList<Field>* data = nullptr);
     void setCommand(uint8_t command);
@@ -40,5 +37,3 @@ private:
     QByteArray m_parcel;
     void updateCrc();
 };
-
-#endif // ParcelTable_H

@@ -10,6 +10,12 @@
     <height>597</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <family>Consolas</family>
+    <pointsize>10</pointsize>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
@@ -38,6 +44,13 @@
        </item>
        <item>
         <widget class="QComboBox" name="cbxBaud"/>
+       </item>
+       <item>
+        <widget class="QSpinBox" name="spinBoxAddress">
+         <property name="maximum">
+          <number>255</number>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -105,7 +118,14 @@
          </widget>
         </item>
         <item>
-         <widget class="QTextEdit" name="textEdit"/>
+         <widget class="QTextEdit" name="textEdit">
+          <property name="font">
+           <font>
+            <family>Consolas</family>
+            <pointsize>10</pointsize>
+           </font>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -140,6 +160,18 @@
    <addaction name="action"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionSend"/>
+  </widget>
   <action name="action">
    <property name="text">
     <string>Отправить(F1)</string>
@@ -149,6 +181,14 @@
    </property>
    <property name="shortcut">
     <string>F1</string>
+   </property>
+  </action>
+  <action name="actionSend">
+   <property name="text">
+    <string>Send</string>
+   </property>
+   <property name="shortcut">
+    <string>Space</string>
    </property>
   </action>
  </widget>

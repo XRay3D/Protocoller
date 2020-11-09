@@ -1,5 +1,4 @@
-#ifndef MEASURINGINTERFACE_H
-#define MEASURINGINTERFACE_H
+#pragma once
 
 #include "tester.h"
 
@@ -13,5 +12,3 @@ private:
     QThread thread;
     QSemaphore semafore;
 };
-
-#endif // MEASURINGINTERFACE_H

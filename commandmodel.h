@@ -1,5 +1,4 @@
-#ifndef DATATABLE_H
-#define DATATABLE_H
+#pragma once
 
 #include "field.h"
 #include "parcelmodel.h"
@@ -9,19 +8,42 @@
 #include <QTextStream>
 
 class Command {
+    friend QDataStream& operator<<(QDataStream& ds, const Command& c)
+    {
+        ds << c.m_index;
+        ds << c.m_name;
+        ds << c.m_rx;
+        ds << c.m_tx;
+        return ds;
+    }
+    friend QDataStream& operator>>(QDataStream& ds, Command& c)
+    {
+        ds >> c.m_index;
+        ds >> c.m_name;
+        ds >> c.m_rx;
+        ds >> c.m_tx;
+        return ds;
+    }
+
 public:
+    explicit Command()
+        : m_index(-1)
+        , m_name("")
+    {
+    }
     explicit Command(QString name, quint8 index, bool newCommand = true)
-        : m_name(name)
-        , m_index(index)
+        : m_index(index)
+        , m_name(name)
 
     {
         if (newCommand) {
-            m_tx = { Field("Start1"), Field("Start2"), Field("Size"), Field("Command"), Field("CRC") };
-            m_rx = { Field("Start1"), Field("Start2"), Field("Size"), Field("Command"), Field("CRC") };
-            m_tx[0].setValue(0x55);
-            m_tx[1].setValue(0xAA);
-            m_tx[2].setValue(m_tx.size());
-            m_tx[3].setValue(m_index);
+            m_tx = { Field("Start1"), Field("Start2"), Field("Size"), Field("Addres"), Field("Command"), Field("CRC") };
+            m_rx = { Field("Start1"), Field("Start2"), Field("Size"), Field("Addres"), Field("Command"), Field("CRC") };
+            m_tx[0] = uint8_t(0x55);
+            m_tx[1] = uint8_t(0xAA);
+            m_tx[2] = uint8_t(m_tx.size());
+            m_tx[3] = uint8_t(0);
+            m_tx[4] = uint8_t(m_index);
         }
     }
     QString name() const { return m_name; }
@@ -32,17 +54,16 @@ public:
     QList<Field>* rx() { return &m_rx; }
 
 private:
-    QList<Field> m_tx;
-    QList<Field> m_rx;
-
-    QString m_name;
     quint8 m_index;
+    QString m_name;
+    QList<Field> m_rx;
+    QList<Field> m_tx;
 };
 
 class CommandModel : public QAbstractTableModel {
     Q_OBJECT
 public:
-    explicit CommandModel(QObject* parent = Q_NULLPTR, ParcelModel* tx = nullptr);
+    explicit CommandModel(QObject* parent = nullptr, ParcelModel* tx = nullptr);
     ~CommandModel() override;
     QList<Field>* txData(int row);
     QList<Field>* rxData(int row);
@@ -73,5 +94,3 @@ private:
     QString m_name;
     ParcelModel* m_tx;
 };
-
-#endif // DATATABLE_H

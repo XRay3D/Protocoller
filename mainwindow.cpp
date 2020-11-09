@@ -49,10 +49,12 @@ MainWindow::MainWindow(QWidget* parent)
     ui->tvRx->setItemDelegate(new MyItemDelegate());
     ui->tvTx->setItemDelegate(new MyItemDelegate());
 
-    connect(ui->tvCommand, &DataView::clicked, [&](const QModelIndex& index) {
+    connect(ui->tvCommand, &DataView::clicked, [this](const QModelIndex& index) {
         if (index.row() > -1) {
             rx->setData(command->rxData(index.row()));
-            tx->setData(command->txData(index.row()));
+            auto rxData(command->txData(index.row()));
+            (*rxData)[3] = uint8_t(ui->spinBoxAddress->value());
+            tx->setData(rxData);
             ui->tvRx->resizeRowsToContents();
             ui->tvTx->resizeRowsToContents();
         }
@@ -81,6 +83,7 @@ MainWindow::MainWindow(QWidget* parent)
     fileMenu->addAction(QIcon(), "Сохранить как", []() {});
 
     readSettings();
+    setWindowFlag(Qt::WindowStaysOnTopHint);
 }
 
 MainWindow::~MainWindow()
@@ -100,6 +103,7 @@ void MainWindow::writeSettings()
     settings.setValue("widget/windowState", ui->widget->saveState());
     settings.setValue("cbxPort", ui->cbxPort->currentIndex());
     settings.setValue("cbxBaud", ui->cbxBaud->currentIndex());
+    settings.setValue("spinBoxAddress", ui->spinBoxAddress->value());
     settings.endGroup();
 }
 
@@ -113,6 +117,7 @@ void MainWindow::readSettings()
     ui->widget->restoreState(settings.value("widget/windowState").toByteArray());
     ui->cbxPort->setCurrentIndex(settings.value("cbxPort").toInt());
     ui->cbxBaud->setCurrentIndex(settings.value("cbxBaud").toInt());
+    ui->spinBoxAddress->setValue(settings.value("spinBoxAddress").toInt());
     settings.endGroup();
 }
 
@@ -125,20 +130,24 @@ void MainWindow::on_pbSend_clicked()
 
 void MainWindow::on_cbxPort_currentIndexChanged(const QString& arg1)
 {
-    if (!hwi::tester->setPortName(arg1))
-        QMessageBox::critical(this, "", arg1 + ": " + hwi::tester->errorString());
+    if (!hwi::tester->setPortName(arg1)) {
+        //QMessageBox::critical(this, "", arg1 + ": " + hwi::tester->errorString());
+    }
 }
 
 void MainWindow::on_cbxBaud_currentIndexChanged(const QString& arg1)
 {
-    if (!hwi::tester->setBaudRate(arg1.toInt()))
-        QMessageBox::critical(this, "", ui->cbxPort->currentText() + ": " + hwi::tester->errorString());
+    if (!hwi::tester->setBaudRate(arg1.toInt())) {
+        //QMessageBox::critical(this, "", ui->cbxPort->currentText() + ": " + hwi::tester->errorString());
+    }
 }
 
 void MainWindow::Error(const QString& errString, const QByteArray& data)
 {
     ui->textEdit->setTextColor(Qt::red);
     ui->textEdit->append("Rx " + QTime::currentTime().toString("hh:mm:ss.zzz: ") + " " + errString + " " + data.toHex().toUpper());
+    ui->textEdit->append(QString::fromLocal8Bit(data.mid(5)));
+    setErrorType(reinterpret_cast<const uchar*>(data.data())[4]);
 }
 
 void MainWindow::setError(const QString& errString)
@@ -150,11 +159,41 @@ void MainWindow::setError(const QString& errString)
 void MainWindow::setRx(const QByteArray& data)
 {
     ui->textEdit->setTextColor(Qt::darkGreen);
-    ui->textEdit->append("Rx " + QTime::currentTime().toString("hh:mm:ss.zzz: ") + data.toHex().toUpper());
+    ui->textEdit->append("Rx " + QTime::currentTime().toString("hh:mm:ss.zzz:\n") + data.toHex().toUpper());
+    ui->textEdit->append(QString::fromLocal8Bit(data.mid(5)));
+    setErrorType(reinterpret_cast<const uchar*>(data.data())[4]);
 }
 
 void MainWindow::setTx(const QByteArray& data)
 {
     ui->textEdit->setTextColor(Qt::blue);
-    ui->textEdit->append("Tx " + QTime::currentTime().toString("hh:mm:ss.zzz: ") + data.toHex().toUpper());
+    ui->textEdit->append("Tx " + QTime::currentTime().toString("hh:mm:ss.zzz:\n") + data.toHex().toUpper());
+    ui->textEdit->append(QString::fromLocal8Bit(data.mid(5)));
+}
+
+void MainWindow::setErrorType(uchar err)
+{
+    enum {
+        BUFFER_OVERFLOW = 0xF0,
+        WRONG_COMMAND = 0xF1,
+        TEXTUAL_PARCEL = 0xF2,
+        CRC_ERROR = 0xF3
+    };
+
+    switch (err) {
+    case BUFFER_OVERFLOW:
+        ui->textEdit->append("BUFFER_OVERFLOW");
+        break;
+    case WRONG_COMMAND:
+        ui->textEdit->append("WRONG_COMMAND");
+        break;
+    case TEXTUAL_PARCEL:
+        ui->textEdit->append("TEXTUAL_PARCEL");
+        break;
+    case CRC_ERROR:
+        ui->textEdit->append("CRC_ERROR");
+        break;
+    default:
+        return;
+    }
 }

@@ -1,5 +1,4 @@
-#ifndef TABLEVIEW_H
-#define TABLEVIEW_H
+#pragma once
 
 #include <QItemDelegate>
 #include <QTableView>
@@ -25,17 +24,12 @@ class DataView : public QTableView {
     Q_OBJECT
 public:
     explicit DataView(QWidget* parent = nullptr);
-    QTimer resizeTtimer;
 
     // QWidget interface
 protected:
-    void showEvent(QShowEvent* event) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
-    //    void resizeEvent(QResizeEvent* event) override;
 
     // QAbstractItemView interface
 protected slots:
     void rowsInserted(const QModelIndex& parent, int start, int end) override;
 };
-
-#endif // TABLEVIEW_H

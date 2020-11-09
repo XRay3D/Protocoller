@@ -1,5 +1,4 @@
-#ifndef MY_PROTOCOL_H
-#define MY_PROTOCOL_H
+#pragma once
 
 #include "myprotokol.h"
 #include <QComboBox>
@@ -65,5 +64,3 @@ private:
     QMutex m_mutex;
     int m_couter;
 };
-
-#endif // MY_PROTOCOL_H
