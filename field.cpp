@@ -1,16 +1,14 @@
 #include "field.h"
 
-const QStringList Field::m_typeNames{ "int8", "int16", "int32", "uint8", "uint16", "uint32", "float", "double" };
+const QStringList Field::m_typeNames{"int8", "int16", "int32", "uint8", "uint16", "uint32", "float", "double", "QByteArray"};
 
 Field::Field(const QString& name)
-    : m_name(name)
-{
+    : m_name(name) {
     m_value.Uint64 = 0;
 }
 
-QVariant Field::value2() const
-{
-    switch (m_type) {
+QVariant Field::value2() const {
+    switch(m_type) {
     case 0:
         return QVariant(*(int8_t*)(&m_value));
     case 1:
@@ -30,9 +28,8 @@ QVariant Field::value2() const
     }
 }
 
-void Field::setValue2(const char *ptr)
-{
-    switch (m_type) {
+void Field::setValue2(const char* ptr) {
+    switch(m_type) {
     case 0:
         *(int8_t*)(&m_value) = *(int8_t*)ptr;
         break;
@@ -60,9 +57,8 @@ void Field::setValue2(const char *ptr)
     }
 }
 
-void Field::setValue3(const QVariant &value)
-{
-    switch (m_type) {
+void Field::setValue3(const QVariant& value) {
+    switch(m_type) {
     case 0:
         *(int8_t*)(&m_value) = value.toInt();
         break;
@@ -90,9 +86,8 @@ void Field::setValue3(const QVariant &value)
     }
 }
 
-int Field::size() const
-{
-    switch (m_type) {
+int Field::size() const {
+    switch(m_type) {
     case 0:
         return sizeof(int8_t);
     case 1:
@@ -126,10 +121,9 @@ QString Field::typeName() const { return m_typeNames[m_type]; }
 
 QStringList Field::typeNames() const { return m_typeNames; }
 
-QByteArray Field::data()
-{
+QByteArray Field::data() {
     const char* const p = reinterpret_cast<char*>(&m_value);
-    switch (m_type) {
+    switch(m_type) {
     case 0:
         return QByteArray(p, sizeof(int8_t));
     case 1:

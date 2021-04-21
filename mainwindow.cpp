@@ -9,23 +9,54 @@
 #include <QSerialPortInfo>
 #include <QSettings>
 #include <QTime>
+#include <QtWidgets>
 
 #include <hw/interface.h>
 
+#include <ranges>
+
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-    , rx(new ParcelModel(this))
-    , tx(new ParcelModel(this))
-    , command(new CommandModel(this, tx))
+    , ui(new Ui::MainWindow) //
+
 {
     ui->setupUi(this);
 
-    for (const QSerialPortInfo& PortInfo : QSerialPortInfo::availablePorts())
-        ui->cbxPort->addItem(PortInfo.portName());
+    rx = new ParcelModel(this);
+    tx = new ParcelModel(this);
 
-    for (qint32& BaudRate : QSerialPortInfo::standardBaudRates())
-        ui->cbxBaud->addItem(QString::number(BaudRate));
+    command = new CommandModel(this, tx);
+
+    {
+        auto piv{QSerialPortInfo::availablePorts().toVector()};
+        std::ranges::sort(piv, {}, [](const QSerialPortInfo& pi) { return pi.portName().midRef(3).toUInt(); });
+        for(auto&& pi : piv)
+            ui->cbxPort->addItem(pi.portName());
+        for(qint32& BaudRate : QSerialPortInfo::standardBaudRates())
+            ui->cbxBaud->addItem(QString::number(BaudRate));
+    }
+
+    {
+        auto toolBar = addToolBar("Sender");
+        toolBar->setObjectName("Sender");
+        toolBar->setMovable(false);
+
+        auto action = toolBar->addAction(QIcon{}, "Send", [] {
+            qDebug(__FUNCTION__);
+        });
+        action->setShortcut({"F1"});
+
+        QWidget* spitoolBarnWidget = new QWidget(toolBar);
+        QHBoxLayout* spinLay = new QHBoxLayout(spitoolBarnWidget);
+        spinLay->setContentsMargins(0, 0, 10, 0); // Here you set the spacing
+
+        spinLay->addWidget(ui->cbxPort);
+        spinLay->addWidget(ui->cbxBaud);
+        spinLay->addWidget(ui->chbxAddress);
+        spinLay->addWidget(ui->spinBoxAddress);
+
+        toolBar->addWidget(spitoolBarnWidget);
+    }
 
     ui->tvCommand->setModel(command);
     ui->tvCommand->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
@@ -49,10 +80,12 @@ MainWindow::MainWindow(QWidget* parent)
     ui->tvRx->setItemDelegate(new MyItemDelegate());
     ui->tvTx->setItemDelegate(new MyItemDelegate());
 
-    connect(ui->tvCommand, &DataView::clicked, [&](const QModelIndex& index) {
-        if (index.row() > -1) {
+    connect(ui->tvCommand, &DataView::clicked, [this](const QModelIndex& index) {
+        if(index.row() > -1) {
             rx->setData(command->rxData(index.row()));
-            tx->setData(command->txData(index.row()));
+            auto rxData(command->txData(index.row()));
+            (*rxData)[3].setValue3(ui->spinBoxAddress->value());
+            tx->setData(rxData);
             ui->tvRx->resizeRowsToContents();
             ui->tvTx->resizeRowsToContents();
         }
@@ -73,6 +106,7 @@ MainWindow::MainWindow(QWidget* parent)
     });
 
     connect(rx, &ParcelModel::error, this, &MainWindow::setError);
+    connect(ui->pbClear, &QPushButton::clicked, ui->textEdit, &QTextEdit::clear);
 
     QMenu* fileMenu = menuBar()->addMenu(tr("Файл"));
     fileMenu->addAction(QIcon(), "Новый", []() {});
@@ -81,17 +115,16 @@ MainWindow::MainWindow(QWidget* parent)
     fileMenu->addAction(QIcon(), "Сохранить как", []() {});
 
     readSettings();
+    setWindowFlag(Qt::WindowStaysOnTopHint);
 }
 
-MainWindow::~MainWindow()
-{
+MainWindow::~MainWindow() {
     writeSettings();
     command->save();
     delete ui;
 }
 
-void MainWindow::writeSettings()
-{
+void MainWindow::writeSettings() {
     QSettings settings;
     settings.beginGroup("MainWindow");
     settings.setValue("geometry", saveGeometry());
@@ -100,11 +133,11 @@ void MainWindow::writeSettings()
     settings.setValue("widget/windowState", ui->widget->saveState());
     settings.setValue("cbxPort", ui->cbxPort->currentIndex());
     settings.setValue("cbxBaud", ui->cbxBaud->currentIndex());
+    settings.setValue("spinBoxAddress", ui->spinBoxAddress->value());
     settings.endGroup();
 }
 
-void MainWindow::readSettings()
-{
+void MainWindow::readSettings() {
     QSettings settings;
     settings.beginGroup("MainWindow");
     restoreGeometry(settings.value("geometry").toByteArray());
@@ -113,48 +146,73 @@ void MainWindow::readSettings()
     ui->widget->restoreState(settings.value("widget/windowState").toByteArray());
     ui->cbxPort->setCurrentIndex(settings.value("cbxPort").toInt());
     ui->cbxBaud->setCurrentIndex(settings.value("cbxBaud").toInt());
+    ui->spinBoxAddress->setValue(settings.value("spinBoxAddress").toInt());
     settings.endGroup();
 }
 
-void MainWindow::on_pbSend_clicked()
-{
+void MainWindow::on_pbSend_clicked() {
     QByteArray data(tx->parcel());
     setTx(data);
     emit hwi::tester->Write(data);
 }
 
-void MainWindow::on_cbxPort_currentIndexChanged(const QString& arg1)
-{
-    if (!hwi::tester->setPortName(arg1))
+void MainWindow::on_cbxPort_currentIndexChanged(const QString& arg1) {
+    if(!hwi::tester->setPortName(arg1))
         QMessageBox::critical(this, "", arg1 + ": " + hwi::tester->errorString());
 }
 
-void MainWindow::on_cbxBaud_currentIndexChanged(const QString& arg1)
-{
-    if (!hwi::tester->setBaudRate(arg1.toInt()))
+void MainWindow::on_cbxBaud_currentIndexChanged(const QString& arg1) {
+    if(!hwi::tester->setBaudRate(arg1.toInt()))
         QMessageBox::critical(this, "", ui->cbxPort->currentText() + ": " + hwi::tester->errorString());
 }
 
-void MainWindow::Error(const QString& errString, const QByteArray& data)
-{
+void MainWindow::Error(const QString& errString, const QByteArray& data) {
     ui->textEdit->setTextColor(Qt::red);
     ui->textEdit->append("Rx " + QTime::currentTime().toString("hh:mm:ss.zzz: ") + " " + errString + " " + data.toHex().toUpper());
+    ui->textEdit->append(QString::fromLocal8Bit(data.mid(5)));
+    setErrorType(reinterpret_cast<const uchar*>(data.data())[4]);
 }
 
-void MainWindow::setError(const QString& errString)
-{
+void MainWindow::setError(const QString& errString) {
     ui->textEdit->setTextColor(Qt::red);
     ui->textEdit->append(errString);
 }
 
-void MainWindow::setRx(const QByteArray& data)
-{
+void MainWindow::setRx(const QByteArray& data) {
     ui->textEdit->setTextColor(Qt::darkGreen);
-    ui->textEdit->append("Rx " + QTime::currentTime().toString("hh:mm:ss.zzz: ") + data.toHex().toUpper());
+    ui->textEdit->append("Rx " + QTime::currentTime().toString("hh:mm:ss.zzz:\n") + data.toHex().toUpper());
+    ui->textEdit->append(QString::fromLocal8Bit(data.mid(5)));
+    setErrorType(reinterpret_cast<const uchar*>(data.data())[4]);
 }
 
-void MainWindow::setTx(const QByteArray& data)
-{
+void MainWindow::setTx(const QByteArray& data) {
     ui->textEdit->setTextColor(Qt::blue);
-    ui->textEdit->append("Tx " + QTime::currentTime().toString("hh:mm:ss.zzz: ") + data.toHex().toUpper());
+    ui->textEdit->append("Tx " + QTime::currentTime().toString("hh:mm:ss.zzz:\n") + data.toHex().toUpper());
+    //ui->textEdit->append(QString::fromLocal8Bit(data.mid(5)));
+}
+
+void MainWindow::setErrorType(uchar err) {
+    enum {
+        BUFFER_OVERFLOW = 0xF0,
+        WRONG_COMMAND = 0xF1,
+        TEXTUAL_PARCEL = 0xF2,
+        CRC_ERROR = 0xF3
+    };
+
+    switch(err) {
+    case BUFFER_OVERFLOW:
+        ui->textEdit->append("BUFFER_OVERFLOW");
+        break;
+    case WRONG_COMMAND:
+        ui->textEdit->append("WRONG_COMMAND");
+        break;
+    case TEXTUAL_PARCEL:
+        ui->textEdit->append("TEXTUAL_PARCEL");
+        break;
+    case CRC_ERROR:
+        ui->textEdit->append("CRC_ERROR");
+        break;
+    default:
+        return;
+    }
 }

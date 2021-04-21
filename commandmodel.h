@@ -16,12 +16,13 @@ public:
 
     {
         if (newCommand) {
-            m_tx = { Field("Start1"), Field("Start2"), Field("Size"), Field("Command"), Field("CRC") };
-            m_rx = { Field("Start1"), Field("Start2"), Field("Size"), Field("Command"), Field("CRC") };
+            m_tx = { Field("Start1"), Field("Start2"), Field("Size"), Field("Addres"), Field("Command"), Field("CRC") };
+            m_rx = { Field("Start1"), Field("Start2"), Field("Size"), Field("Addres"), Field("Command"), Field("CRC") };
             m_tx[0].setValue(0x55);
             m_tx[1].setValue(0xAA);
             m_tx[2].setValue(m_tx.size());
-            m_tx[3].setValue(m_index);
+            m_tx[3].setValue(0);
+            m_tx[4].setValue(m_index);
         }
     }
     QString name() const { return m_name; }

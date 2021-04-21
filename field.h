@@ -3,6 +3,7 @@
 
 #include <QDebug>
 #include <QObject>
+#include <variant>
 
 class Field {
 public:
@@ -14,8 +15,7 @@ public:
     QVariant value2() const;
 
     template <typename T>
-    void setValue(const T& value)
-    {
+    void setValue(const T& value) {
         *(T*)(&m_value) = value;
     }
 
@@ -49,10 +49,9 @@ private:
         float Float;
         double Double;
     } m_value;
-
-    //    type_info ti;
-
+    type_info ti;
     int m_type = 3; //uint8_t
+
     QString m_name;
     static const QStringList m_typeNames;
 };

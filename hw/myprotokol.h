@@ -2,25 +2,36 @@
 #define MYPROTOKOL_H
 
 #include <QByteArray>
+#include <QDebug>
 #include <stdint.h>
+
+#define UseAddress
 
 enum {
     TX = 0xAA55,
     RX = 0x55AA,
+#ifdef UseAddress
+    MIN_LEN = 6
+#else
     MIN_LEN = 5
+#endif
+
 };
 
 #pragma pack(push, 1)
 
 typedef struct Parcel_t {
     uint16_t start;
-    uint8_t length;
+    uint8_t size;
+#ifdef UseAddress
+    uint8_t address;
+#endif
     uint8_t command;
     uint8_t data[128];
-    uint8_t crc() const { return data[length - MIN_LEN]; }
+    uint8_t crc() const { return data[size - MIN_LEN]; }
     template <typename T>
     T value() const { return *reinterpret_cast<const T*>(data); }
-    QByteArray text() const { return QByteArray(reinterpret_cast<const char*>(data), length - MIN_LEN); }
+    QByteArray text() const { return QByteArray(reinterpret_cast<const char*>(data), size - MIN_LEN); }
 } Parcel_t;
 
 #pragma pack(pop)
@@ -37,7 +48,10 @@ public:
         m_data.resize(MIN_LEN + sizeof(T));
         Parcel_t* d = reinterpret_cast<Parcel_t*>(m_data.data());
         d->start = TX;
-        d->length = static_cast<uint8_t>(m_data.size());
+        d->size = static_cast<uint8_t>(m_data.size());
+#ifdef UseAddress
+        d->address = 0;
+#endif
         d->command = cmd;
         memcpy(d->data, &data, sizeof(T));
         d->data[sizeof(T)] = CalcCrc(m_data); //crc
@@ -53,7 +67,10 @@ public:
         m_data.resize(MIN_LEN);
         Parcel_t* d = reinterpret_cast<Parcel_t*>(m_data.data());
         d->start = TX;
-        d->length = MIN_LEN;
+        d->size = MIN_LEN;
+#ifdef UseAddress
+        d->address = 0;
+#endif
         d->command = cmd;
         d->data[0] = CalcCrc(m_data); //crc
         return m_data;
@@ -68,7 +85,7 @@ public:
         const Parcel_t* const d = reinterpret_cast<const Parcel_t*>(data.data());
         if (data.size() >= MIN_LEN)
             if (d->start == RX)
-                if (d->length == data.size())
+                if (d->size == data.size())
                     if (d->crc() == CalcCrc(data))
                         return true;
         return false;
@@ -81,12 +98,9 @@ public:
     uint8_t CalcCrc(const QByteArray& data)
     {
         uint8_t crc8 = 0;
-        for (uint16_t i = 0, len = static_cast<uint16_t>(data.size()) - 1; i < len; ++i) {
+        for (int i = 0, len = data.size() - 1; i < len; ++i) {
             crc8 ^= data[i];
-            crc8 = array[crc8];
-            //for (uint16_t j = 0; j < 8; ++j) {
-            //    crc8 = (crc8 & 0x80) ? (crc8 << 1) ^ POLYNOMIAL : crc8 << 1;
-            //}
+            crc8 = crcArray[crc8];
         }
         return crc8;
     }
@@ -94,7 +108,7 @@ public:
 private:
     QByteArray m_data;
     enum { POLYNOMIAL = 0x1D }; // x^8 + x^4 + x^3 + x^2 + 1
-    static constexpr uint8_t array[0x100]{
+    static constexpr uint8_t crcArray[0x100] {
         0x00, 0x1D, 0x3A, 0x27, 0x74, 0x69, 0x4E, 0x53,
         0xE8, 0xF5, 0xD2, 0xCF, 0x9C, 0x81, 0xA6, 0xBB,
         0xCD, 0xD0, 0xF7, 0xEA, 0xB9, 0xA4, 0x83, 0x9E,

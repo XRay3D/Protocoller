@@ -9,6 +9,32 @@
 
 class ParcelModel : public QAbstractTableModel, public MyProtokol {
     Q_OBJECT
+
+    QList<Field>* m_data = nullptr;
+    QByteArray m_parcel;
+    void updateCrc();
+    bool m_setUseAddress{};
+
+    enum Rows {
+        Start1,
+        Start2,
+        Size,
+        Address,
+        Command,
+        Data,
+        Crc,
+    };
+    enum Columns {
+        Name,
+        Type,
+        TypeSize,
+        Value,
+        ColumnCount,
+    };
+
+signals:
+    void error(const QString& error);
+
 public:
     explicit ParcelModel(QObject* parent = Q_NULLPTR);
     ~ParcelModel() override;
@@ -17,11 +43,11 @@ public:
     const QByteArray& parcel();
     void setParcel(const QByteArray& data);
 
-signals:
-    void error(const QString& error);
+    void setUseAddress(bool fl);
+    void setAddress(int val);
 
     // QAbstractItemModel interface
-public:
+
     QVariant data(const QModelIndex& index, int role) const override;
     bool setData(const QModelIndex& index, const QVariant& value, int role) override;
 
@@ -32,13 +58,8 @@ public:
     int columnCount(const QModelIndex& parent) const override;
     int rowCount(const QModelIndex& parent) const override;
 
-    bool insertRows(int row, int count, const QModelIndex& parent) override;
-    bool removeRows(int row, int count, const QModelIndex& parent) override;
-
-private:
-    QList<Field>* m_data = nullptr;
-    QByteArray m_parcel;
-    void updateCrc();
+    bool insertRows(int row, int = 1, const QModelIndex& = {}) override;
+    bool removeRows(int row, int = 1, const QModelIndex& = {}) override;
 };
 
 #endif // ParcelTable_H

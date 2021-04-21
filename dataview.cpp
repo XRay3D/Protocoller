@@ -35,7 +35,6 @@ QWidget* MyItemDelegate::createEditor(QWidget* parent, const QStyleOptionViewIte
         case 0:
             dsbx->setRange(std::numeric_limits<int8_t>::min(), std::numeric_limits<int8_t>::max());
             dsbx->setValue(int8_t(index.data(Qt::UserRole).toInt()));
-
             break;
         case 1:
             dsbx->setRange(std::numeric_limits<int16_t>::min(), std::numeric_limits<int16_t>::max());
@@ -125,12 +124,8 @@ void MyItemDelegate::drawFocus(QPainter* painter, const QStyleOptionViewItem& op
 DataView::DataView(QWidget* parent)
     : QTableView(parent)
 {
-    //setEditTriggers(SelectedClicked);
-}
 
-void DataView::showEvent(QShowEvent* /*event*/)
-{
-    resizeTtimer.start(50);
+    //setEditTriggers(SelectedClicked);
 }
 
 void DataView::contextMenuEvent(QContextMenuEvent* event)

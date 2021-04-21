@@ -25,13 +25,10 @@ class DataView : public QTableView {
     Q_OBJECT
 public:
     explicit DataView(QWidget* parent = nullptr);
-    QTimer resizeTtimer;
 
     // QWidget interface
 protected:
-    void showEvent(QShowEvent* event) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
-    //    void resizeEvent(QResizeEvent* event) override;
 
     // QAbstractItemView interface
 protected slots:

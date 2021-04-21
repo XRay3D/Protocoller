@@ -110,15 +110,15 @@ void TesterPort::ReadyRead()
     for (int i = 0; i < m_data.size() - 3; ++i) {
         const Parcel_t* const parcel = reinterpret_cast<const Parcel_t*>(m_data.constData() + i);
         if (parcel->start == RX) {
-            if ((parcel->length + i) <= m_data.size()) {
-                m_tmpData = m_data.mid(i, parcel->length);
+            if ((parcel->size + i) <= m_data.size()) {
+                m_tmpData = m_data.mid(i, parcel->size);
                 if (CheckData(m_tmpData)) {
                     m_tester->Read(m_tmpData);
                 } else {
                     m_tester->Error("CRC_ERROR", m_tmpData);
                     m_data.clear();
                 }
-                m_data.remove(0, i + parcel->length);
+                m_data.remove(0, i + parcel->size);
                 i = -1;
             }
         }
