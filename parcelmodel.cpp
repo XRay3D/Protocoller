@@ -13,13 +13,13 @@ ParcelModel::~ParcelModel() {
 
 void ParcelModel::setData(QList<Field>* data) {
     if (data_) {
-        beginRemoveRows(QModelIndex(), 0, data_->size() - 1);
+        beginRemoveRows({}, 0, data_->size() - 1);
         data_ = nullptr;
         endRemoveRows();
     }
     data_ = data;
     if (data_) {
-        beginInsertRows(QModelIndex(), 0, data_->size() - 1);
+        beginInsertRows({}, 0, data_->size() - 1);
         endInsertRows();
         updateCrc();
     }
@@ -27,22 +27,22 @@ void ParcelModel::setData(QList<Field>* data) {
 
 void ParcelModel::setCommand(uint8_t command) {
     if (data_) {
-        (*data_)[3].setValue(command);
-        dataChanged(createIndex(3, 3), createIndex(3, 3));
+        (*data_)[Address].setValue(command);
+        dataChanged(createIndex(Address, ValueHex), createIndex(Address, ValueHex));
     }
 }
 
 const QByteArray& ParcelModel::parcel() {
-    return m_parcel;
+    return parcel_;
 }
 
 void ParcelModel::setParcel(const QByteArray& data) {
     if (!data_)
         return;
-    if (m_parcel.size() != data.size())
+    if (parcel_.size() != data.size())
         error(QString("Не соответствие размеров посылок:\n"
                       "в табличце %1 байт пришло %2!")
-                  .arg(m_parcel.size())
+                  .arg(parcel_.size())
                   .arg(data.size()));
 
     const char* ptr = data.constData();
@@ -53,19 +53,19 @@ void ParcelModel::setParcel(const QByteArray& data) {
         fields[i].setValue(ptr);
         ptr += fields[i].size();
     }
-    dataChanged(createIndex(0, 3), createIndex(fields.size(), 3));
+    dataChanged(createIndex(Start1, ValueHex), createIndex(fields.size(), ValueHex));
 }
 
 void ParcelModel::setUseAddress(bool fl) {
-    if (m_useAddress != fl) {
-        m_useAddress ? removeRows(Address) : insertRows(Address);
+    if (useAddress_ != fl) {
+        useAddress_ ? removeRows(Address) : insertRows(Address);
         if (fl) (*data_)[Address].setName("Address");
-        m_useAddress = fl;
+        useAddress_ = fl;
     }
 }
 
 void ParcelModel::setAddress(int val) {
-    if (m_useAddress) {
+    if (useAddress_) {
         (*data_)[Address].setValue(val);
         dataChanged(index(Address, Name), index(Address, Value), {Qt::DisplayRole});
     }
@@ -101,7 +101,7 @@ QVariant ParcelModel::data(const QModelIndex& index, int role) const {
             return QColor(255, 230, 230);
         else if (index.row() == Size)
             return QColor(230, 230, 255);
-        else if (index.row() == Address /*&& m_useAddress*/)
+        else if (index.row() == Address /*&& useAddress_*/)
             return QColor(255, 255, 230);
         else if (index.row() == Command)
             return QColor(255, 255, 230);
@@ -140,7 +140,7 @@ bool ParcelModel::setData(const QModelIndex& index, const QVariant& value, int r
 }
 
 Qt::ItemFlags ParcelModel::flags(const QModelIndex& index) const {
-    if (index.column() == 2 || (index.row() < 5 && (index.row() != 3 && index.column() < 3)) || index.row() == data_->size() - 1)
+    if (index.column() == Size || (index.row() < 5 && (index.row() != Value && index.column() < Value)) || index.row() == data_->size() - 1)
         return Qt::ItemIsEnabled;
     return Qt::ItemIsEditable | Qt::ItemIsEnabled;
 }
@@ -159,8 +159,8 @@ bool ParcelModel::insertRows(int row, int /*count*/, const QModelIndex& parent) 
     beginInsertRows(parent, row, row);
     data_->insert(row, Field(QString("Field_%1").arg(row - 4)));
     endInsertRows();
-    (*data_)[2].setValue(data_->size());
-    QModelIndex index(createIndex(2, 3));
+    (*data_)[Size].setValue<uint8_t>(data_->size());
+    QModelIndex index(createIndex(Size, Value));
     emit dataChanged(index, index, {Qt::EditRole});
     updateCrc();
     return true;
@@ -172,32 +172,31 @@ bool ParcelModel::removeRows(int row, int /*count*/, const QModelIndex& parent) 
     beginRemoveRows(parent, row, row);
     data_->removeAt(row);
     endRemoveRows();
-    (*data_)[2].setValue(data_->size());
-    QModelIndex index(createIndex(2, 3));
+    (*data_)[Size].setValue<uint8_t>(data_->size());
+    QModelIndex index(createIndex(Size, Value));
     emit dataChanged(index, index, {Qt::EditRole});
     updateCrc();
     return true;
 }
 
 void ParcelModel::updateCrc() {
-    m_parcel.clear();
+    parcel_.clear();
     if (data_) {
-        QList<Field>& fl = (*data_);
+        auto& refData = (*data_);
 
-        uint8_t size = 0;
-        for (int i = 0; i < fl.size(); ++i)
-            size += fl[i].size();
-        fl[2].setValue(size);
-        QModelIndex index2(createIndex(2, 3));
+        uint8_t size{};
+        for (auto&& field: refData) size += field.size();
+
+        refData[Size].setValue(size);
+        QModelIndex index2(createIndex(Size, Value));
         emit dataChanged(index2, index2, {Qt::EditRole});
 
-        for (int i = 0; i < fl.size(); ++i) {
-            m_parcel.append(fl[i].byteArray());
-        }
-        uint8_t crc = CalcCrc(m_parcel);
-        fl.last().setValue(crc);
-        m_parcel[m_parcel.size() - 1] = fl.last().byteArray()[0];
-        QModelIndex index(createIndex(fl.size() - 1, 3));
+        for (auto&& field: refData) parcel_.append(field.byteArray());
+
+        refData.last().setValue(CalcCrc(parcel_));
+        QModelIndex index(createIndex(refData.size() - 1, Value));
         emit dataChanged(index, index, {Qt::EditRole});
+
+        parcel_[parcel_.size() - 1] = refData.last().byteArray()[0];
     }
 }

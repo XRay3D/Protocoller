@@ -11,9 +11,9 @@ class ParcelModel : public QAbstractTableModel, public MyProtokol {
     Q_OBJECT
 
     QList<Field>* data_ = nullptr;
-    QByteArray m_parcel;
+    QByteArray parcel_;
     void updateCrc();
-    bool m_useAddress{};
+    bool useAddress_{};
 
     enum Rows {
         Start1,

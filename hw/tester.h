@@ -34,13 +34,13 @@ signals:
     void Error(const QString& errString, const QByteArray& data);
 
 private:
-    TesterPort* m_port;
-    QMutex m_mutex;
-    QThread m_portThread;
-    int m_stage;
-    bool m_ready;
-    mutable QSemaphore m_semaphore;
-    mutable bool m_result;
+    TesterPort* port_;
+    QMutex mutex_;
+    QThread portThread_;
+    int stage_;
+    bool ready_;
+    mutable QSemaphore semaphore_;
+    mutable bool result_;
     void RxNullFunction(const QByteArray& data);
 };
 
@@ -53,17 +53,17 @@ public:
     void Open(int mode);
     void Close();
     void Write(const QByteArray& data);
-    bool m_isOpen;
-    Tester* m_tester;
+    bool isOpen_;
+    Tester* tester_;
     //    typedef void (Tester::*func)(const Parcel_t&);
-    //    QVector<func> m_f;
+    //    QVector<func> f_;
 
 private:
     void ReadyRead();
-    QByteArray m_data;
-    QByteArray m_tmpData;
-    QMutex m_mutex;
-    int m_couter;
+    QByteArray data_;
+    QByteArray tmpData_;
+    QMutex mutex_;
+    int couter_;
 };
 
 #endif // MY_PROTOCOL_H

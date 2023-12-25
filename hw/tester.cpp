@@ -8,51 +8,51 @@
 
 Tester::Tester(QObject* parent)
     : QObject(parent) {
-    m_port = new TesterPort(this);
-    m_port->moveToThread(&m_portThread);
-    connect(&m_portThread, &QThread::finished, m_port, &QObject::deleteLater);
-    connect(this, &Tester::Open, m_port, &TesterPort::Open);
-    connect(this, &Tester::Close, m_port, &TesterPort::Close);
-    connect(this, &Tester::Write, m_port, &TesterPort::Write);
-    m_portThread.start(QThread::NormalPriority);
+    port_ = new TesterPort(this);
+    port_->moveToThread(&portThread_);
+    connect(&portThread_, &QThread::finished, port_, &QObject::deleteLater);
+    connect(this, &Tester::Open, port_, &TesterPort::Open);
+    connect(this, &Tester::Close, port_, &TesterPort::Close);
+    connect(this, &Tester::Write, port_, &TesterPort::Write);
+    portThread_.start(QThread::NormalPriority);
 }
 
 Tester::~Tester() {
-    m_portThread.quit();
-    m_portThread.wait();
+    portThread_.quit();
+    portThread_.wait();
 }
 
 QString Tester::errorString() const {
-    return m_port->errorString();
+    return port_->errorString();
 }
 
 bool Tester::setBaudRate(qint32 baudRate) {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&mutex_);
     emit Close();
-    if(!m_semaphore.tryAcquire(1, 1000))
+    if(!semaphore_.tryAcquire(1, 1000))
         return false;
 
     if(baudRate)
-        m_port->setBaudRate(baudRate);
+        port_->setBaudRate(baudRate);
 
     emit Open(QIODevice::ReadWrite);
-    if(!m_semaphore.tryAcquire(1, 1000))
+    if(!semaphore_.tryAcquire(1, 1000))
         return false;
 
     return true;
 }
 
 bool Tester::setPortName(const QString& name) {
-    QMutexLocker locker(&m_mutex);
+    QMutexLocker locker(&mutex_);
     emit Close();
-    if(!m_semaphore.tryAcquire(1, 1000))
+    if(!semaphore_.tryAcquire(1, 1000))
         return false;
 
     if(!name.isEmpty())
-        m_port->setPortName(name);
+        port_->setPortName(name);
 
     emit Open(QIODevice::ReadWrite);
-    if(!m_semaphore.tryAcquire(1, 1000))
+    if(!semaphore_.tryAcquire(1, 1000))
         return false;
 
     return true;
@@ -60,7 +60,7 @@ bool Tester::setPortName(const QString& name) {
 
 void Tester::RxNullFunction(const QByteArray& data) {
     qDebug() << "RxNullFunction" << data;
-    //m_semaphore.release();
+    //semaphore_.release();
 }
 
 ////////////////////////////////
@@ -68,9 +68,9 @@ void Tester::RxNullFunction(const QByteArray& data) {
 /// \param manInterface
 ///
 TesterPort::TesterPort(Tester* testerInterface)
-    : m_isOpen(false)
-    , m_tester(testerInterface)
-//    , m_f(QVector<TesterPort::func>(0x100, &Tester::RxNullFunction))
+    : isOpen_(false)
+    , tester_(testerInterface)
+//    , f_(QVector<TesterPort::func>(0x100, &Tester::RxNullFunction))
 {
     setBaudRate(QSerialPort::Baud9600);
     setParity(QSerialPort::NoParity);
@@ -82,12 +82,12 @@ TesterPort::~TesterPort() { }
 
 void TesterPort::Open(int mode) {
     if(open(static_cast<OpenMode>(mode)))
-        m_tester->m_semaphore.release();
+        tester_->semaphore_.release();
 }
 
 void TesterPort::Close() {
     close();
-    m_tester->m_semaphore.release();
+    tester_->semaphore_.release();
 }
 
 void TesterPort::Write(const QByteArray& data) {
@@ -95,21 +95,21 @@ void TesterPort::Write(const QByteArray& data) {
 }
 
 void TesterPort::ReadyRead() {
-    QMutexLocker locker(&m_mutex);
-    m_data.append(readAll());
-    qDebug() << "ReadyRead" << m_data.toHex().toUpper();
-    for(int i = 0; i < m_data.size() - 3; ++i) {
-        const Parcel_t* const parcel = reinterpret_cast<const Parcel_t*>(m_data.constData() + i);
+    QMutexLocker locker(&mutex_);
+    data_.append(readAll());
+    qDebug() << "ReadyRead" << data_.toHex().toUpper();
+    for(int i = 0; i < data_.size() - 3; ++i) {
+        const Parcel_t* const parcel = reinterpret_cast<const Parcel_t*>(data_.constData() + i);
         if(parcel->start == RX) {
-            if((parcel->size + i) <= m_data.size()) {
-                m_tmpData = m_data.mid(i, parcel->size);
-                if(CheckData(m_tmpData)) {
-                    m_tester->Read(m_tmpData);
+            if((parcel->size + i) <= data_.size()) {
+                tmpData_ = data_.mid(i, parcel->size);
+                if(CheckData(tmpData_)) {
+                    tester_->Read(tmpData_);
                 } else {
-                    m_tester->Error("CRC_ERROR", m_tmpData);
-                    m_data.clear();
+                    tester_->Error("CRC_ERROR", tmpData_);
+                    data_.clear();
                 }
-                m_data.remove(0, i + parcel->size);
+                data_.remove(0, i + parcel->size);
                 i = -1;
             }
         }

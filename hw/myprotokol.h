@@ -44,17 +44,17 @@ public:
     ///
     template <typename T>
     QByteArray& Parcel(uint8_t cmd, const T& data) {
-        m_data.resize(MIN_LEN + sizeof(T));
-        Parcel_t* d = reinterpret_cast<Parcel_t*>(m_data.data());
+        data_.resize(MIN_LEN + sizeof(T));
+        Parcel_t* d = reinterpret_cast<Parcel_t*>(data_.data());
         d->start = TX;
-        d->size = static_cast<uint8_t>(m_data.size());
+        d->size = static_cast<uint8_t>(data_.size());
 #ifdef UseAddress
         d->address = 0;
 #endif
         d->command = cmd;
         memcpy(d->data, &data, sizeof(T));
-        d->data[sizeof(T)] = CalcCrc(m_data); //crc
-        return m_data;
+        d->data[sizeof(T)] = CalcCrc(data_); //crc
+        return data_;
     }
     /////////////////////////////////////////////////
     /// \brief Parcel
@@ -62,16 +62,16 @@ public:
     /// \return
     ///
     QByteArray& Parcel(uint8_t cmd) {
-        m_data.resize(MIN_LEN);
-        Parcel_t* d = reinterpret_cast<Parcel_t*>(m_data.data());
+        data_.resize(MIN_LEN);
+        Parcel_t* d = reinterpret_cast<Parcel_t*>(data_.data());
         d->start = TX;
         d->size = MIN_LEN;
 #ifdef UseAddress
         d->address = 0;
 #endif
         d->command = cmd;
-        d->data[0] = CalcCrc(m_data); //crc
-        return m_data;
+        d->data[0] = CalcCrc(data_); //crc
+        return data_;
     }
     /////////////////////////////////////////////////
     /// \brief CheckData
@@ -102,7 +102,7 @@ public:
     }
 
 private:
-    QByteArray m_data;
+    QByteArray data_;
     enum { POLYNOMIAL = 0x1D }; // x^8 + x^4 + x^3 + x^2 + 1
     static constexpr uint8_t crcArray[0x100]{
         0x00, 0x1D, 0x3A, 0x27, 0x74, 0x69, 0x4E, 0x53,

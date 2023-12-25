@@ -6,7 +6,7 @@
 
 CommandModel::CommandModel(QObject* parent, ParcelModel* tx)
     : QAbstractTableModel(parent)
-    , m_tx(tx)
+    , tx_(tx)
 
 {
     open("data.json");
@@ -15,31 +15,31 @@ CommandModel::CommandModel(QObject* parent, ParcelModel* tx)
 CommandModel::~CommandModel() { save(); }
 
 void CommandModel::new_() {
-    m_name.clear();
-    beginRemoveRows(QModelIndex(), 0, m_data.size() - 1);
-    m_data.clear();
+    name_.clear();
+    beginRemoveRows(QModelIndex(), 0, data_.size() - 1);
+    data_.clear();
     endRemoveRows();
 }
 
 void CommandModel::open(const QString& name) {
 
-    m_name = name;
-    QFile file(m_name);
+    name_ = name;
+    QFile file(name_);
     if (!file.open(QIODevice::ReadOnly)) {
-        QMessageBox::critical(reinterpret_cast<QWidget*>(parent()), "", m_name + ": " + file.errorString(), QMessageBox::Ok);
+        QMessageBox::critical(reinterpret_cast<QWidget*>(parent()), "", name_ + ": " + file.errorString(), QMessageBox::Ok);
         return;
     }
 
     QByteArray data(file.readAll());
     if (data.isEmpty()) {
-        QMessageBox::critical(reinterpret_cast<QWidget*>(parent()), "", m_name + ": is empty", QMessageBox::Ok);
+        QMessageBox::critical(reinterpret_cast<QWidget*>(parent()), "", name_ + ": is empty", QMessageBox::Ok);
         return;
     }
 
     auto array = QJsonDocument::fromJson(data).array();
     for (const QJsonValue& value: array) {
         auto object = value.toObject();
-        m_data.append(Command(object["name"].toString(), static_cast<quint8>(object["index"].toInt()), false));
+        data_.append(Command(object["name"].toString(), static_cast<quint8>(object["index"].toInt()), false));
         auto load = [](const QJsonArray& array, QList<Field>& fields) {
             for (const QJsonValue& value: array) {
                 auto object = value.toObject();
@@ -50,15 +50,15 @@ void CommandModel::open(const QString& name) {
             }
         };
 
-        load(object["rx"].toArray(), m_data.back().rx());
-        load(object["tx"].toArray(), m_data.back().tx());
+        load(object["rx"].toArray(), data_.back().rx());
+        load(object["tx"].toArray(), data_.back().tx());
     }
 }
 
 void CommandModel::save() {
 
     QJsonArray arr;
-    for (Command& cmd: m_data) {
+    for (Command& cmd: data_) {
         QJsonArray rxArray;
         QJsonArray txArray;
         auto save = [](QJsonArray& array, const QList<Field>& fields) {
@@ -85,26 +85,26 @@ void CommandModel::save() {
         arr.append(obj);
     }
 
-    QFile file(m_name);
+    QFile file(name_);
     if (!file.open(QIODevice::WriteOnly)) {
-        QMessageBox::critical(reinterpret_cast<QWidget*>(parent()), "", m_name + ": " + file.errorString(), QMessageBox::Ok);
+        QMessageBox::critical(reinterpret_cast<QWidget*>(parent()), "", name_ + ": " + file.errorString(), QMessageBox::Ok);
         return;
     }
     file.write(QJsonDocument(arr).toJson(QJsonDocument::Compact));
 }
 
 void CommandModel::saveAs(const QString& name) {
-    m_name = name;
+    name_ = name;
     save();
 }
 
-int CommandModel::rowCount(const QModelIndex&) const { return m_data.size(); }
+int CommandModel::rowCount(const QModelIndex&) const { return data_.size(); }
 
 int CommandModel::columnCount(const QModelIndex&) const { return ColumnCount; }
 
 QVariant CommandModel::data(const QModelIndex& index, int role) const {
     if (role == Qt::DisplayRole || role == Qt::EditRole) {
-        const Command& var = m_data[index.row()];
+        const Command& var = data_[index.row()];
         switch (index.column()) {
         case Name:
             return var.name();
@@ -121,15 +121,15 @@ QVariant CommandModel::data(const QModelIndex& index, int role) const {
 
 bool CommandModel::setData(const QModelIndex& index, const QVariant& value, int role) {
     if (role == Qt::EditRole) {
-        Command& var = m_data[index.row()];
+        Command& var = data_[index.row()];
         switch (index.column()) {
         case Name:
             var.setName(value.toString());
             return true;
         case Index:
             var.setIndex(static_cast<quint8>(value.toInt()));
-            if (m_tx)
-                m_tx->setCommand(var.index());
+            if (tx_)
+                tx_->setCommand(var.index());
             return true;
         }
     }
@@ -147,9 +147,9 @@ QVariant CommandModel::headerData(int section, Qt::Orientation orientation, int 
 }
 
 bool CommandModel::insertRows(int row, int /*count*/, const QModelIndex& parent) {
-    row = m_data.size();
+    row = data_.size();
     beginInsertRows(parent, row, row);
-    m_data.insert(row, Command(QString("Command_%1").arg(row), static_cast<quint8>(row)));
+    data_.insert(row, Command(QString("Command_%1").arg(row), static_cast<quint8>(row)));
     endInsertRows();
     return true;
 }
@@ -157,7 +157,7 @@ bool CommandModel::insertRows(int row, int /*count*/, const QModelIndex& parent)
 bool CommandModel::removeRows(int row, int /*count*/, const QModelIndex& parent) {
     emit resetParcelModel();
     beginRemoveRows(parent, row, row);
-    m_data.removeAt(row);
+    data_.removeAt(row);
     endRemoveRows();
     return true;
 }
