@@ -10,10 +10,10 @@
 class ParcelModel : public QAbstractTableModel, public MyProtokol {
     Q_OBJECT
 
-    QList<Field>* m_data = nullptr;
+    QList<Field>* data_ = nullptr;
     QByteArray m_parcel;
     void updateCrc();
-    bool m_setUseAddress{};
+    bool m_useAddress{};
 
     enum Rows {
         Start1,
@@ -29,6 +29,7 @@ class ParcelModel : public QAbstractTableModel, public MyProtokol {
         Type,
         TypeSize,
         Value,
+        ValueHex,
         ColumnCount,
     };
 

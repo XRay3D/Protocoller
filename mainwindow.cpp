@@ -41,8 +41,10 @@ MainWindow::MainWindow(QWidget* parent)
         toolBar->setObjectName("Sender");
         toolBar->setMovable(false);
 
-        auto action = toolBar->addAction(QIcon{}, "Send", [] {
-            qDebug(__FUNCTION__);
+        auto action = toolBar->addAction(QIcon{}, "Send (F1)", [this] {
+            QByteArray data(tx->parcel());
+            setTx(data);
+            emit hwi::tester->Write(data);
         });
         action->setShortcut({"F1"});
 
@@ -60,7 +62,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     ui->tvCommand->setModel(command);
     ui->tvCommand->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    ui->tvCommand->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    ui->tvCommand->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
     ui->tvCommand->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     ui->tvTx->setModel(tx);
@@ -82,12 +84,9 @@ MainWindow::MainWindow(QWidget* parent)
 
     connect(ui->tvCommand, &DataView::clicked, [this](const QModelIndex& index) {
         if(index.row() > -1) {
-            rx->setData(command->rxData(index.row()));
-            auto rxData(command->txData(index.row()));
-            (*rxData)[3].setValue3(ui->spinBoxAddress->value());
-            tx->setData(rxData);
-            ui->tvRx->resizeRowsToContents();
-            ui->tvTx->resizeRowsToContents();
+            rx->setData(&command->rxData(index.row()));
+            tx->setData(&command->txData(index.row()));
+            command->txData(index.row())[ui->chbxAddress->isChecked() ? 3 : 2].setValue<uint8_t>(ui->spinBoxAddress->value());
         }
     });
 
@@ -150,11 +149,6 @@ void MainWindow::readSettings() {
     settings.endGroup();
 }
 
-void MainWindow::on_pbSend_clicked() {
-    QByteArray data(tx->parcel());
-    setTx(data);
-    emit hwi::tester->Write(data);
-}
 
 void MainWindow::on_cbxPort_currentIndexChanged(const QString& arg1) {
     if(!hwi::tester->setPortName(arg1))
@@ -193,23 +187,23 @@ void MainWindow::setTx(const QByteArray& data) {
 
 void MainWindow::setErrorType(uchar err) {
     enum {
-        BUFFER_OVERFLOW = 0xF0,
-        WRONG_COMMAND = 0xF1,
-        TEXTUAL_PARCEL = 0xF2,
-        CRC_ERROR = 0xF3
+        BufferOverflow = 0xF0,
+        WrongCommand = 0xF1,
+        TextualParcel = 0xF2,
+        CrcError = 0xF3
     };
 
     switch(err) {
-    case BUFFER_OVERFLOW:
+    case BufferOverflow:
         ui->textEdit->append("BUFFER_OVERFLOW");
         break;
-    case WRONG_COMMAND:
+    case WrongCommand:
         ui->textEdit->append("WRONG_COMMAND");
         break;
-    case TEXTUAL_PARCEL:
+    case TextualParcel:
         ui->textEdit->append("TEXTUAL_PARCEL");
         break;
-    case CRC_ERROR:
+    case CrcError:
         ui->textEdit->append("CRC_ERROR");
         break;
     default:

@@ -7,8 +7,7 @@
 #define Dbg 1
 
 Tester::Tester(QObject* parent)
-    : QObject(parent)
-{
+    : QObject(parent) {
     m_port = new TesterPort(this);
     m_port->moveToThread(&m_portThread);
     connect(&m_portThread, &QThread::finished, m_port, &QObject::deleteLater);
@@ -18,53 +17,48 @@ Tester::Tester(QObject* parent)
     m_portThread.start(QThread::NormalPriority);
 }
 
-Tester::~Tester()
-{
+Tester::~Tester() {
     m_portThread.quit();
     m_portThread.wait();
 }
 
-QString Tester::errorString() const
-{
+QString Tester::errorString() const {
     return m_port->errorString();
 }
 
-bool Tester::setBaudRate(qint32 baudRate)
-{
+bool Tester::setBaudRate(qint32 baudRate) {
     QMutexLocker locker(&m_mutex);
     emit Close();
-    if (!m_semaphore.tryAcquire(1, 1000))
+    if(!m_semaphore.tryAcquire(1, 1000))
         return false;
 
-    if (baudRate)
+    if(baudRate)
         m_port->setBaudRate(baudRate);
 
     emit Open(QIODevice::ReadWrite);
-    if (!m_semaphore.tryAcquire(1, 1000))
+    if(!m_semaphore.tryAcquire(1, 1000))
         return false;
 
     return true;
 }
 
-bool Tester::setPortName(const QString& name)
-{
+bool Tester::setPortName(const QString& name) {
     QMutexLocker locker(&m_mutex);
     emit Close();
-    if (!m_semaphore.tryAcquire(1, 1000))
+    if(!m_semaphore.tryAcquire(1, 1000))
         return false;
 
-    if (!name.isEmpty())
+    if(!name.isEmpty())
         m_port->setPortName(name);
 
     emit Open(QIODevice::ReadWrite);
-    if (!m_semaphore.tryAcquire(1, 1000))
+    if(!m_semaphore.tryAcquire(1, 1000))
         return false;
 
     return true;
 }
 
-void Tester::RxNullFunction(const QByteArray& data)
-{
+void Tester::RxNullFunction(const QByteArray& data) {
     qDebug() << "RxNullFunction" << data;
     //m_semaphore.release();
 }
@@ -84,35 +78,32 @@ TesterPort::TesterPort(Tester* testerInterface)
     connect(this, &QSerialPort::readyRead, this, &TesterPort::ReadyRead);
 }
 
-TesterPort::~TesterPort() {}
+TesterPort::~TesterPort() { }
 
-void TesterPort::Open(int mode)
-{
-    if (open(static_cast<OpenMode>(mode)))
+void TesterPort::Open(int mode) {
+    if(open(static_cast<OpenMode>(mode)))
         m_tester->m_semaphore.release();
 }
 
-void TesterPort::Close()
-{
+void TesterPort::Close() {
     close();
     m_tester->m_semaphore.release();
 }
 
-void TesterPort::Write(const QByteArray& data)
-{
+void TesterPort::Write(const QByteArray& data) {
     qDebug() << "Write" << data.toHex().toUpper() << write(data);
 }
 
-void TesterPort::ReadyRead()
-{
+void TesterPort::ReadyRead() {
     QMutexLocker locker(&m_mutex);
     m_data.append(readAll());
-    for (int i = 0; i < m_data.size() - 3; ++i) {
+    qDebug() << "ReadyRead" << m_data.toHex().toUpper();
+    for(int i = 0; i < m_data.size() - 3; ++i) {
         const Parcel_t* const parcel = reinterpret_cast<const Parcel_t*>(m_data.constData() + i);
-        if (parcel->start == RX) {
-            if ((parcel->size + i) <= m_data.size()) {
+        if(parcel->start == RX) {
+            if((parcel->size + i) <= m_data.size()) {
                 m_tmpData = m_data.mid(i, parcel->size);
-                if (CheckData(m_tmpData)) {
+                if(CheckData(m_tmpData)) {
                     m_tester->Read(m_tmpData);
                 } else {
                     m_tester->Error("CRC_ERROR", m_tmpData);

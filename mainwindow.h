@@ -19,7 +19,6 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_pbSend_clicked();
     void on_cbxPort_currentIndexChanged(const QString& arg1);
     void on_cbxBaud_currentIndexChanged(const QString& arg1);
 
@@ -37,8 +36,6 @@ private:
     ParcelModel* rx;
     ParcelModel* tx;
     CommandModel* command;
-
-
 };
 
 #endif // MAINWINDOW_H

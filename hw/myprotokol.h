@@ -5,7 +5,7 @@
 #include <QDebug>
 #include <stdint.h>
 
-#define UseAddress
+//#define UseAddress
 
 enum {
     TX = 0xAA55,
@@ -38,13 +38,12 @@ typedef struct Parcel_t {
 
 class MyProtokol {
 public:
-    MyProtokol() {}
+    MyProtokol() { }
     /////////////////////////////////////////////////
     ///
     ///
     template <typename T>
-    QByteArray& Parcel(uint8_t cmd, const T& data)
-    {
+    QByteArray& Parcel(uint8_t cmd, const T& data) {
         m_data.resize(MIN_LEN + sizeof(T));
         Parcel_t* d = reinterpret_cast<Parcel_t*>(m_data.data());
         d->start = TX;
@@ -62,8 +61,7 @@ public:
     /// \param cmd
     /// \return
     ///
-    QByteArray& Parcel(uint8_t cmd)
-    {
+    QByteArray& Parcel(uint8_t cmd) {
         m_data.resize(MIN_LEN);
         Parcel_t* d = reinterpret_cast<Parcel_t*>(m_data.data());
         d->start = TX;
@@ -80,13 +78,12 @@ public:
     /// \param data
     /// \return
     ///
-    bool CheckData(const QByteArray& data)
-    {
+    bool CheckData(const QByteArray& data) {
         const Parcel_t* const d = reinterpret_cast<const Parcel_t*>(data.data());
-        if (data.size() >= MIN_LEN)
-            if (d->start == RX)
-                if (d->size == data.size())
-                    if (d->crc() == CalcCrc(data))
+        if(data.size() >= MIN_LEN)
+            if(d->start == RX)
+                if(d->size == data.size())
+                    if(d->crc() == CalcCrc(data))
                         return true;
         return false;
     }
@@ -95,10 +92,9 @@ public:
     /// \param data
     /// \return
     ///
-    uint8_t CalcCrc(const QByteArray& data)
-    {
+    uint8_t CalcCrc(const QByteArray& data) {
         uint8_t crc8 = 0;
-        for (int i = 0, len = data.size() - 1; i < len; ++i) {
+        for(int i = 0, len = data.size() - 1; i < len; ++i) {
             crc8 ^= data[i];
             crc8 = crcArray[crc8];
         }
@@ -108,7 +104,7 @@ public:
 private:
     QByteArray m_data;
     enum { POLYNOMIAL = 0x1D }; // x^8 + x^4 + x^3 + x^2 + 1
-    static constexpr uint8_t crcArray[0x100] {
+    static constexpr uint8_t crcArray[0x100]{
         0x00, 0x1D, 0x3A, 0x27, 0x74, 0x69, 0x4E, 0x53,
         0xE8, 0xF5, 0xD2, 0xCF, 0x9C, 0x81, 0xA6, 0xBB,
         0xCD, 0xD0, 0xF7, 0xEA, 0xB9, 0xA4, 0x83, 0x9E,
@@ -140,8 +136,7 @@ private:
         0xB2, 0xAF, 0x88, 0x95, 0xC6, 0xDB, 0xFC, 0xE1,
         0x5A, 0x47, 0x60, 0x7D, 0x2E, 0x33, 0x14, 0x09,
         0x7F, 0x62, 0x45, 0x58, 0x0B, 0x16, 0x31, 0x2C,
-        0x97, 0x8A, 0xAD, 0xB0, 0xE3, 0xFE, 0xD9, 0xC4
-    };
+        0x97, 0x8A, 0xAD, 0xB0, 0xE3, 0xFE, 0xD9, 0xC4};
 };
 
 #endif // MYPROTOKOL_H

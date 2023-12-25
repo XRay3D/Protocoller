@@ -1,145 +1,51 @@
 #include "field.h"
 
-const QStringList Field::m_typeNames{"int8", "int16", "int32", "uint8", "uint16", "uint32", "float", "double", "QByteArray"};
-
 Field::Field(const QString& name)
-    : m_name(name) {
-    m_value.Uint64 = 0;
+    : name_{name} { }
+
+QVariant Field::qVariant() const {
+    return std::visit([](auto&& arg) { return QVariant{arg}; }, value_);
 }
 
-QVariant Field::value2() const {
-    switch(m_type) {
-    case 0:
-        return QVariant(*(int8_t*)(&m_value));
-    case 1:
-        return QVariant(*(int16_t*)(&m_value));
-    case 2:
-        return QVariant(*(int32_t*)(&m_value));
-    case 3:
-        return QVariant(*(uint8_t*)(&m_value));
-    case 4:
-        return QVariant(*(uint16_t*)(&m_value));
-    case 5:
-        return QVariant(*(uint32_t*)(&m_value));
-    case 6:
-        return QVariant(*(float*)(&m_value));
-    case 7:
-        return QVariant(*(double*)(&m_value));
-    }
-}
-
-void Field::setValue2(const char* ptr) {
-    switch(m_type) {
-    case 0:
-        *(int8_t*)(&m_value) = *(int8_t*)ptr;
-        break;
-    case 1:
-        *(int16_t*)(&m_value) = *(int16_t*)ptr;
-        break;
-    case 2:
-        *(int32_t*)(&m_value) = *(int32_t*)ptr;
-        break;
-    case 3:
-        *(uint8_t*)(&m_value) = *(uint8_t*)ptr;
-        break;
-    case 4:
-        *(uint16_t*)(&m_value) = *(uint16_t*)ptr;
-        break;
-    case 5:
-        *(uint32_t*)(&m_value) = *(uint32_t*)ptr;
-        break;
-    case 6:
-        *(float*)(&m_value) = *(float*)ptr;
-        break;
-    case 7:
-        *(double*)(&m_value) = *(double*)ptr;
-        break;
-    }
-}
-
-void Field::setValue3(const QVariant& value) {
-    switch(m_type) {
-    case 0:
-        *(int8_t*)(&m_value) = value.toInt();
-        break;
-    case 1:
-        *(int16_t*)(&m_value) = value.toInt();
-        break;
-    case 2:
-        *(int32_t*)(&m_value) = value.toInt();
-        break;
-    case 3:
-        *(uint8_t*)(&m_value) = value.toUInt();
-        break;
-    case 4:
-        *(uint16_t*)(&m_value) = value.toUInt();
-        break;
-    case 5:
-        *(uint32_t*)(&m_value) = value.toUInt();
-        break;
-    case 6:
-        *(float*)(&m_value) = value.toFloat();
-        break;
-    case 7:
-        *(double*)(&m_value) = value.toDouble();
-        break;
-    }
-}
+Field::Variant Field::variant() const { return value_; }
 
 int Field::size() const {
-    switch(m_type) {
-    case 0:
-        return sizeof(int8_t);
-    case 1:
-        return sizeof(int16_t);
-    case 2:
-        return sizeof(int32_t);
-    case 3:
-        return sizeof(uint8_t);
-    case 4:
-        return sizeof(uint16_t);
-    case 5:
-        return sizeof(uint32_t);
-    case 6:
-        return sizeof(float);
-    case 7:
-        return sizeof(double);
-    default:
-        return -1;
-    }
+    return std::visit([](auto arg) { return +sizeof(arg); }, value_);
 }
 
-int Field::type() const { return m_type; }
+Field::Type Field::type() const { return static_cast<Type>(value_.index()); }
 
-void Field::setType(int type) { m_type = type; }
-
-QString Field::name() const { return m_name; }
-
-void Field::setName(const QString& value) { m_name = value; }
-
-QString Field::typeName() const { return m_typeNames[m_type]; }
-
-QStringList Field::typeNames() const { return m_typeNames; }
-
-QByteArray Field::data() {
-    const char* const p = reinterpret_cast<char*>(&m_value);
-    switch(m_type) {
-    case 0:
-        return QByteArray(p, sizeof(int8_t));
-    case 1:
-        return QByteArray(p, sizeof(int16_t));
-    case 2:
-        return QByteArray(p, sizeof(int32_t));
-    case 3:
-        return QByteArray(p, sizeof(uint8_t));
-    case 4:
-        return QByteArray(p, sizeof(uint16_t));
-    case 5:
-        return QByteArray(p, sizeof(uint32_t));
-    case 6:
-        return QByteArray(p, sizeof(float));
-    case 7:
-        return QByteArray(p, sizeof(double));
-    }
-    return QByteArray();
+void Field::setType(Type type) {
+    static constexpr std::array array{
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<int8_t>(arg); }, f.value_); },
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<int16_t>(arg); }, f.value_); },
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<int32_t>(arg); }, f.value_); },
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<int64_t>(arg); }, f.value_); },
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<uint8_t>(arg); }, f.value_); },
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<uint16_t>(arg); }, f.value_); },
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<uint32_t>(arg); }, f.value_); },
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<uint64_t>(arg); }, f.value_); },
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<float>(arg); }, f.value_); },
+        +[](Field& f) { f.value_ = std::visit([](auto arg) { return static_cast<double>(arg); }, f.value_); },
+    };
+    array.at(type)(*this);
 }
+
+QString Field::name() const { return name_; }
+
+void Field::setName(const QString& value) { name_ = value; }
+
+QString Field::typeName() const { return typeNames_[value_.index()]; }
+
+QStringList Field::typeNames() { return typeNames_; }
+
+QByteArray Field::byteArray() const {
+    return std::visit([]<typename T>(const T& arg) {
+        char data[sizeof(T)]{};
+        memcpy(data, &arg, sizeof(T)); // std::bit_cast<char[sizeof(T)]>(arg);
+        return QByteArray{data, +sizeof(T)};
+    },
+        value_);
+}
+
+QByteArray Field::hex() const { return byteArray().toHex().toUpper(); }
